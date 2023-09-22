@@ -1,0 +1,58 @@
+#!/bin/bash
+
+source gcloud_utils.sh
+
+if gcloud_command_not_exists; then
+    echo "GCloud is not installed in your system, installing...";
+fi
+
+if gcloud_not_signed; then
+    echo "GCloud is authenticated with service account remotly, connecting...";
+    gcloud init
+fi
+
+case "$1" in
+  get-external-ip)
+    shift
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --project)
+          PROJECT="$2"
+          shift 2
+          ;;
+        --zone)
+          ZONE="$2"
+          shift 2
+          ;;
+        --instance)
+          INSTANCE="$2"
+          shift 2
+          ;;
+        *)
+          echo "Invalid argument: $1"
+          exit 1
+          ;;
+      esac
+    done
+
+    if [ -z "$PROJECT" ] || [ -z "$ZONE" ] || [ -z "$INSTANCE" ]; then
+      echo "Usage: $0 get-external-ip --project <project_id> --zone <zone> --instance <instance_name>"
+      exit 1
+    fi
+
+    if ! gcloud --version &>/dev/null; then
+      echo "Error: gcloud is not installed or not signed correctly."
+      exit 1
+    fi
+
+    gcloud compute ssh \
+    --zone "$ZONE" \
+    "$INSTANCE" \
+    --project "$PROJECT" \
+    --command "$(declare -f gcloud_get_external_ip); gcloud_get_external_ip"
+    ;;
+  *)
+    echo "Usage: $0 {get-external-ip}"
+    exit 1
+    ;;
+esac
